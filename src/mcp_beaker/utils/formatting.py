@@ -99,6 +99,23 @@ def format_system_history(entries: list[SystemHistoryEntry], fqdn: str) -> str:
     return "\n".join(lines)
 
 
+def format_system_inventory(kv: dict[str, list[str]], fqdn: str) -> str:
+    if not kv:
+        return f"No inventory key-value data found for system '{fqdn}'."
+    lines = [f"Inventory key-values for {fqdn}:\n"]
+    for key_name in sorted(kv.keys()):
+        vals = kv[key_name]
+        if len(vals) == 1:
+            lines.append(f"  {key_name}: {vals[0]}")
+        elif len(vals) <= 10:
+            lines.append(f"  {key_name}: {', '.join(vals)}")
+        else:
+            lines.append(f"  {key_name}: [{len(vals)} values]")
+            for v in vals:
+                lines.append(f"    - {v}")
+    return "\n".join(lines)
+
+
 def format_system_arches(arches: dict[str, list[str]], fqdn: str) -> str:
     if not arches:
         return f"No OS/arch information found for system '{fqdn}'."

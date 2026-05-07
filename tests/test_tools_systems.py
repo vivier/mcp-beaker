@@ -13,6 +13,7 @@ from mcp_beaker.servers.systems import (
     get_system_arches,
     get_system_details,
     get_system_history,
+    get_system_inventory,
     list_systems,
     loan_system,
     power_system,
@@ -150,6 +151,38 @@ class TestGetSystemHistory:
     async def test_error(self, ctx, mock_client):
         mock_client.systems_history = AsyncMock(side_effect=BeakerError("fail"))
         result = await get_system_history(ctx, fqdn="h")
+        assert "Error" in result
+
+
+# ---- get_system_inventory --------------------------------------------------
+
+class TestGetSystemInventory:
+    async def test_success(self, ctx, mock_client):
+        result = await get_system_inventory(ctx, fqdn="host1.example.com")
+        assert "CPUMODEL" in result
+        assert "PCIID" in result
+        assert "10de:20b5" in result
+        assert "GenuineIntel" in result
+
+    async def test_not_found(self, ctx, mock_client):
+        mock_client.systems_get_inventory = AsyncMock(
+            side_effect=BeakerNotFoundError("not found")
+        )
+        result = await get_system_inventory(ctx, fqdn="ghost.example.com")
+        assert "not found" in result.lower()
+
+    async def test_error(self, ctx, mock_client):
+        mock_client.systems_get_inventory = AsyncMock(
+            side_effect=BeakerError("fail")
+        )
+        result = await get_system_inventory(ctx, fqdn="host1")
+        assert "Error" in result
+
+    async def test_generic_error(self, ctx, mock_client):
+        mock_client.systems_get_inventory = AsyncMock(
+            side_effect=RuntimeError("boom")
+        )
+        result = await get_system_inventory(ctx, fqdn="host1")
         assert "Error" in result
 
 

@@ -1,4 +1,4 @@
-"""System-related Beaker tools (4 read + 6 write)."""
+"""System-related Beaker tools (5 read + 6 write)."""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ from mcp_beaker.utils.formatting import (
     format_system_arches,
     format_system_details,
     format_system_history,
+    format_system_inventory,
     format_system_list,
 )
 
@@ -158,6 +159,35 @@ async def get_system_history(
     except Exception as exc:
         logger.error("Failed to fetch history for %s: %s", fqdn, exc)
         return _error(f"Failed to fetch history for '{fqdn}': {exc}")
+
+
+@mcp.tool(
+    tags={"beaker", "read", "systems"},
+    annotations={"title": "Get System Inventory", "readOnlyHint": True},
+)
+async def get_system_inventory(
+    ctx: Context,
+    fqdn: Annotated[str, Field(description="Fully qualified domain name of the system.")],
+) -> str:
+    """Get hardware inventory key-value pairs for a Beaker system.
+
+    Returns key-value data from the system inventory including PCI device
+    IDs, CPU model, disk controllers, USB devices, kernel modules, and
+    other hardware details not available in the standard system details.
+    """
+    client = beaker_client(ctx)
+    try:
+        kv = await client.systems_get_inventory(fqdn)
+        return format_system_inventory(kv, fqdn)
+    except BeakerNotFoundError:
+        return _error(f"System '{fqdn}' not found.")
+    except BeakerError as exc:
+        return _error(str(exc))
+    except ET.ParseError:
+        return _error(f"Failed to parse inventory data for '{fqdn}'.")
+    except Exception as exc:
+        logger.error("Failed to fetch inventory for %s: %s", fqdn, exc)
+        return _error(f"Failed to fetch inventory for '{fqdn}': {exc}")
 
 
 @mcp.tool(

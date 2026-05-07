@@ -73,6 +73,15 @@ def mock_client(beaker_config: BeakerConfig) -> BeakerClient:
     client.systems_get_osmajor_arches = AsyncMock(return_value={
         "RedHatEnterpriseLinux10": ["x86_64", "aarch64"],
     })
+    client.systems_get_inventory = AsyncMock(return_value={
+        "CPUMODEL": ["Intel(R) Xeon(R) Gold 6330 CPU @ 2.00GHz"],
+        "CPUVENDOR": ["GenuineIntel"],
+        "PCIID": ["10de:20b5", "8086:a194"],
+        "FORMFACTOR": ["rackmount"],
+        "HVM": ["1"],
+        "NR_DISKS": ["1"],
+        "NR_ETH": ["4"],
+    })
     client.systems_loan_grant = AsyncMock(return_value=None)
     client.systems_loan_return = AsyncMock(return_value=None)
     client.recipes_tasks_extend = AsyncMock(return_value=None)

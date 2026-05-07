@@ -602,6 +602,34 @@ class BeakerClient:
             args.append(since)
         return await self.call_xmlrpc("systems.history", *args)
 
+    async def systems_get_inventory(self, fqdn: str) -> dict[str, list[str]]:
+        """Fetch the system inventory key-value pairs from the RDF/XML view.
+
+        Returns a dict mapping key names (e.g. PCIID, CPUMODEL) to their
+        list of values.
+        """
+        import xml.etree.ElementTree as _ET
+        from collections import defaultdict as _defaultdict
+
+        response = await self.rest_get(
+            f"/view/{fqdn}",
+            params={"tg_format": "rdfxml"},
+            timeout=30.0,
+        )
+        root = _ET.fromstring(response.text)
+        beaker_prefix = f"{self.config.url}/keys/"
+        kv: dict[str, list[str]] = _defaultdict(list)
+        for elem in root.iter():
+            tag = elem.tag
+            if tag.startswith("{") and elem.text:
+                ns_end = tag.index("}")
+                ns = tag[1:ns_end]
+                local = tag[ns_end + 1 :]
+                if ns.startswith(beaker_prefix) and local == "key":
+                    key_name = ns[len(beaker_prefix) :].rstrip("#")
+                    kv[key_name].append(elem.text)
+        return dict(kv)
+
     async def systems_get_osmajor_arches(
         self, fqdn: str, tags: list[str] | None = None,
     ) -> dict[str, list[str]]:

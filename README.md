@@ -12,7 +12,7 @@ Works with any Beaker server instance. Built on [FastMCP v3](https://gofastmcp.c
 
 ## Features
 
-- **26 tools** covering the full Beaker lifecycle: systems, jobs, distros, tasks
+- **27 tools** covering the full Beaker lifecycle: systems, jobs, distros, tasks
 - **Flexible auth**: Kerberos (native GSSAPI/SPNEGO or `bkr` CLI fallback) and password (XML-RPC)
 - **Job XML validation**: auto-fills missing fields, infers distro families
 - **Failure diagnosis**: deep analysis with auto-retry on correctable failures
@@ -180,11 +180,12 @@ Options:
 
 ## Tools
 
-### Read Tools (14)
+### Read Tools (15)
 
 | Tool | Description |
 |------|-------------|
 | `list_systems` | List systems by availability (all/available/free) |
+| `search_systems` | Search systems by XML filter (PCI IDs, CPU, hostname, etc.) |
 | `get_system_details` | Hardware specs, ownership, status for a system |
 | `get_system_inventory` | Hardware inventory key-values (PCI IDs, CPU, disks, modules) |
 | `get_system_history` | Activity history for a system |
@@ -250,7 +251,7 @@ src/mcp_beaker/
   models/               # Pydantic response models
   servers/
     __init__.py         # FastMCP server, lifespan, DI helper
-    systems.py          # System tools (5 read + 6 write)
+    systems.py          # System tools (6 read + 6 write)
     jobs.py             # Job tools (4 read + 6 write)
     distros.py          # Distro tools (2 read)
     tasks.py            # Task tools (1 read)

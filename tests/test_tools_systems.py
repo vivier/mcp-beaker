@@ -21,6 +21,7 @@ from mcp_beaker.servers.systems import (
     release_system,
     reserve_system,
     return_loan,
+    search_systems,
 )
 
 ATOM_FEED = """\
@@ -52,6 +53,41 @@ class TestParseAtomFeed:
         xml = '<feed xmlns="http://www.w3.org/2005/Atom"><title>Empty</title></feed>'
         systems = _parse_atom_feed(xml)
         assert systems == []
+
+
+# ---- search_systems --------------------------------------------------------
+
+class TestSearchSystems:
+    async def test_success(self, ctx, mock_client):
+        mock_client.rest_get = AsyncMock(
+            return_value=httpx.Response(200, text=ATOM_FEED)
+        )
+        result = await search_systems(
+            ctx, xml_filter='<key_value key="PCIID" op="like" value="%10de%"/>'
+        )
+        assert "host1.example.com" in result
+        assert "host2.example.com" in result
+        mock_client.rest_get.assert_awaited_once()
+        call_kwargs = mock_client.rest_get.call_args
+        assert call_kwargs[1]["params"]["xmlsearch"] == '<key_value key="PCIID" op="like" value="%10de%"/>'
+
+    async def test_empty_results(self, ctx, mock_client):
+        empty_feed = '<feed xmlns="http://www.w3.org/2005/Atom"><title>Empty</title></feed>'
+        mock_client.rest_get = AsyncMock(
+            return_value=httpx.Response(200, text=empty_feed)
+        )
+        result = await search_systems(ctx, xml_filter='<hostname op="=" value="nonexistent"/>')
+        assert "No " in result
+
+    async def test_invalid_filter_type(self, ctx):
+        result = await search_systems(ctx, xml_filter="<anything/>", filter_type="bogus")
+        assert "Error" in result
+        assert "Invalid filter_type" in result
+
+    async def test_connection_error(self, ctx, mock_client):
+        mock_client.rest_get = AsyncMock(side_effect=BeakerError("conn err"))
+        result = await search_systems(ctx, xml_filter="<anything/>")
+        assert "Error" in result
 
 
 # ---- list_systems ----------------------------------------------------------

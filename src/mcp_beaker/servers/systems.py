@@ -1,4 +1,4 @@
-"""System-related Beaker tools (5 read + 6 write)."""
+"""System-related Beaker tools (6 read + 6 write)."""
 
 from __future__ import annotations
 
@@ -96,6 +96,64 @@ async def list_systems(
     except Exception as exc:
         logger.error("Failed to list systems: %s", exc)
         return _error(f"Failed to list systems: {exc}")
+
+
+@mcp.tool(
+    tags={"beaker", "read", "systems"},
+    annotations={"title": "Search Systems", "readOnlyHint": True},
+)
+async def search_systems(
+    ctx: Context,
+    xml_filter: Annotated[
+        str,
+        Field(
+            description=(
+                "XML filter expression, same syntax as <hostRequires/> in Beaker job XML. "
+                "Examples: "
+                "'<key_value key=\"PCIID\" op=\"like\" value=\"%10de%\"/>' (NVIDIA PCI devices), "
+                "'<key_value key=\"CPUVENDOR\" op=\"=\" value=\"GenuineIntel\"/>' (Intel CPUs), "
+                "'<hostname op=\"like\" value=\"%gpu%\"/>' (hostname match)."
+            )
+        ),
+    ],
+    filter_type: Annotated[
+        str,
+        Field(description="System filter: 'all', 'available', or 'free'. Default: 'all'."),
+    ] = "all",
+    limit: Annotated[
+        int,
+        Field(description="Maximum number of systems to return. Use 0 for all. Default: 50."),
+    ] = 50,
+) -> str:
+    """Search Beaker systems using XML filter expressions.
+
+    Filters systems by hardware attributes such as PCI device IDs, CPU model,
+    key-value pairs, hostname patterns, and more. Uses the same filter syntax
+    as the <hostRequires/> element in Beaker job XML.
+    """
+    client = beaker_client(ctx)
+    if filter_type not in FILTER_ENDPOINTS:
+        return _error(
+            f"Invalid filter_type '{filter_type}'. "
+            f"Must be one of: {', '.join(FILTER_ENDPOINTS.keys())}."
+        )
+    url_path = FILTER_ENDPOINTS[filter_type]
+    params = {
+        "tg_format": "atom",
+        "list_tgp_limit": str(limit),
+        "xmlsearch": xml_filter,
+    }
+    try:
+        response = await client.rest_get(url_path, params=params)
+        systems = _parse_atom_feed(response.text)
+        return format_system_list(systems, f"matching xml_filter")
+    except BeakerError as exc:
+        return _error(str(exc))
+    except ET.ParseError:
+        return _error("Failed to parse response from the server.")
+    except Exception as exc:
+        logger.error("Failed to search systems: %s", exc)
+        return _error(f"Failed to search systems: {exc}")
 
 
 @mcp.tool(

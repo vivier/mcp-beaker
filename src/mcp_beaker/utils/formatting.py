@@ -286,6 +286,29 @@ def format_pool_list(
     return "\n".join(lines)
 
 
+def format_pool_access_policy(
+    data: dict[str, Any], pool_name: str,
+) -> str:
+    lines = [f"Access policy for pool '{pool_name}':\n"]
+    rules = data.get("rules", [])
+    if not rules:
+        lines.append("  No access rules defined.")
+        return "\n".join(lines)
+    for idx, rule in enumerate(rules, start=1):
+        permission = rule.get("permission", "?")
+        everybody = rule.get("everybody", False)
+        if everybody:
+            who = "everybody"
+        elif rule.get("user"):
+            who = f"user: {rule['user']}"
+        elif rule.get("group"):
+            who = f"group: {rule['group']}"
+        else:
+            who = "?"
+        lines.append(f"  {idx}. {permission} -> {who}")
+    return "\n".join(lines)
+
+
 def format_generic_result(data: Any, label: str = "Result") -> str:
     """Format an arbitrary result as indented JSON."""
     if isinstance(data, (dict, list)):

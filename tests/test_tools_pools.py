@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock
 
-from mcp_beaker.exceptions import BeakerError
-from mcp_beaker.servers.pools import search_pools
+from mcp_beaker.exceptions import BeakerError, BeakerNotFoundError
+from mcp_beaker.servers.pools import get_pool_access_policy, search_pools
 
 POOL_ENTRIES = [
     {
@@ -80,4 +80,41 @@ class TestSearchPools:
     async def test_generic_error(self, ctx, mock_client):
         mock_client.rest_get_json = AsyncMock(side_effect=RuntimeError("boom"))
         result = await search_pools(ctx)
+        assert "Error" in result
+
+
+ACCESS_POLICY = {
+    "rules": [
+        {"permission": "view", "everybody": True},
+        {"permission": "reserve", "group": "virt-admin"},
+        {"permission": "loan_self", "user": "eperezma"},
+    ],
+}
+
+
+class TestGetPoolAccessPolicy:
+    async def test_success(self, ctx, mock_client):
+        mock_client.rest_get_json = AsyncMock(return_value=ACCESS_POLICY)
+        result = await get_pool_access_policy(ctx, pool_name="my-pool")
+        assert "my-pool" in result
+        assert "view -> everybody" in result
+        assert "reserve -> group: virt-admin" in result
+        assert "loan_self -> user: eperezma" in result
+        mock_client.rest_get_json.assert_awaited_once()
+
+    async def test_not_found(self, ctx, mock_client):
+        mock_client.rest_get_json = AsyncMock(
+            side_effect=BeakerNotFoundError("not found"),
+        )
+        result = await get_pool_access_policy(ctx, pool_name="nope")
+        assert "not found" in result.lower()
+
+    async def test_empty_rules(self, ctx, mock_client):
+        mock_client.rest_get_json = AsyncMock(return_value={"rules": []})
+        result = await get_pool_access_policy(ctx, pool_name="empty-pool")
+        assert "No access rules" in result
+
+    async def test_generic_error(self, ctx, mock_client):
+        mock_client.rest_get_json = AsyncMock(side_effect=RuntimeError("boom"))
+        result = await get_pool_access_policy(ctx, pool_name="fail")
         assert "Error" in result

@@ -8,9 +8,9 @@ from typing import Annotated
 from fastmcp import Context
 from pydantic import Field
 
-from mcp_beaker.exceptions import BeakerError
+from mcp_beaker.exceptions import BeakerError, BeakerNotFoundError
 from mcp_beaker.servers import beaker_client, mcp
-from mcp_beaker.utils.formatting import format_pool_list
+from mcp_beaker.utils.formatting import format_pool_access_policy, format_pool_list
 
 logger = logging.getLogger("mcp-beaker")
 
@@ -89,3 +89,32 @@ async def search_pools(
     except Exception as exc:
         logger.error("Failed to search pools: %s", exc)
         return _error(f"Failed to search pools: {exc}")
+
+
+@mcp.tool(
+    tags={"beaker", "read", "pools"},
+    annotations={"title": "Get Pool Access Policy", "readOnlyHint": True},
+)
+async def get_pool_access_policy(
+    ctx: Context,
+    pool_name: Annotated[
+        str,
+        Field(description="Name of the pool to get the access policy for."),
+    ],
+) -> str:
+    """Get the access policy for a Beaker system pool.
+
+    Returns the list of access rules (permissions, users, groups) that
+    control who can use, loan, or manage systems in the pool.
+    """
+    client = beaker_client(ctx)
+    try:
+        data = await client.rest_get_json(f"/pools/{pool_name}/access-policy/")
+        return format_pool_access_policy(data, pool_name=pool_name)
+    except BeakerNotFoundError:
+        return _error(f"Pool '{pool_name}' not found.")
+    except BeakerError as exc:
+        return _error(str(exc))
+    except Exception as exc:
+        logger.error("Failed to fetch access policy for pool %s: %s", pool_name, exc)
+        return _error(f"Failed to fetch access policy for pool '{pool_name}': {exc}")

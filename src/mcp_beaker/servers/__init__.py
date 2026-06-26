@@ -56,6 +56,7 @@ from mcp_beaker.servers import (  # noqa: E402, F401
     distros,
     general,
     jobs,
+    pools,
     prompts,
     resources,
     systems,

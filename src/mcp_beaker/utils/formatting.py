@@ -252,6 +252,40 @@ def format_whoami(info: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+# ---------------------------------------------------------------------------
+# Pools
+# ---------------------------------------------------------------------------
+
+
+def format_pool_list(
+    entries: list[dict[str, Any]], name: str = "", owner: str = "",
+) -> str:
+    filters: list[str] = []
+    if name:
+        filters.append(f"name='{name}'")
+    if owner:
+        filters.append(f"owner='{owner}'")
+    desc = ", ".join(filters) if filters else "all"
+    if not entries:
+        return f"No pools found matching: {desc}"
+    lines = [f"Found {len(entries)} pool(s) matching: {desc}\n"]
+    for idx, pool in enumerate(entries, start=1):
+        pool_name = pool.get("name", "?")
+        lines.append(f"  {idx}. {pool_name}")
+        owner_info = pool.get("owner")
+        if isinstance(owner_info, dict):
+            owner_name = owner_info.get("user_name") or owner_info.get("group_name", "?")
+            lines.append(f"     Owner: {owner_name}")
+        elif isinstance(owner_info, str):
+            lines.append(f"     Owner: {owner_info}")
+        if pool.get("description"):
+            lines.append(f"     Description: {pool['description']}")
+        systems = pool.get("systems")
+        if systems is not None:
+            lines.append(f"     Systems: {len(systems)}")
+    return "\n".join(lines)
+
+
 def format_generic_result(data: Any, label: str = "Result") -> str:
     """Format an arbitrary result as indented JSON."""
     if isinstance(data, (dict, list)):
